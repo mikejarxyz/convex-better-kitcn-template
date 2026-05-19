@@ -299,14 +299,13 @@ KitCN auth has a one-time bootstrap ordering requirement for new Convex deployme
 
 1. The generated auth functions must exist in Convex before `kitcn env push` can call `generated/auth:getLatestJwks`.
 2. The static `JWKS` env value should be pushed after those functions exist.
-3. After `JWKS` exists, restore the static-JWKS fallback in `convex/auth.config.ts` and regenerate.
+3. `convex/auth.config.ts` should stay bootstrap-safe and use KitCN's dynamic JWKS provider. Do not make clean setup depend on `process.env.JWKS` in this file.
 
 ### First Bootstrap for a New Template Deployment
 
-Start with the dynamic provider only:
+Use the dynamic provider in `convex/auth.config.ts`:
 
 ```ts
-// convex/auth.config.ts - temporary first bootstrap form
 import { getAuthConfigProvider } from "kitcn/auth/config";
 import type { AuthConfig } from "convex/server";
 
@@ -331,22 +330,7 @@ What each command does:
 | `pnpm exec convex dev --once` | Pushes current Convex functions to the active dev deployment once |
 | `pnpm exec kitcn env push` | Generates/syncs `BETTER_AUTH_SECRET` and `JWKS` to Convex env |
 
-After `kitcn env push` succeeds, switch `convex/auth.config.ts` to the normal static-JWKS fallback:
-
-```ts
-import { getAuthConfigProvider } from "kitcn/auth/config";
-import type { AuthConfig } from "convex/server";
-
-export default {
-  providers: [
-    process.env.JWKS
-      ? getAuthConfigProvider({ jwks: process.env.JWKS })
-      : getAuthConfigProvider(),
-  ],
-} satisfies AuthConfig;
-```
-
-Then run:
+After `kitcn env push` succeeds, run one more generation/deploy pass:
 
 ```bash
 pnpm exec kitcn codegen
@@ -355,7 +339,7 @@ pnpm exec convex dev --once
 
 ### Normal Repeatable Flow After Bootstrap
 
-After `JWKS` exists in Convex env:
+After the first bootstrap succeeds:
 
 ```bash
 pnpm exec kitcn codegen
@@ -392,7 +376,7 @@ pnpm exec convex dev --once
 pnpm exec kitcn env push
 ```
 
-If codegen fails because `JWKS` is referenced but missing, temporarily use the dynamic-only `auth.config.ts` form above, deploy once, push env, then restore static-JWKS fallback.
+If codegen fails because `JWKS` is referenced but missing, `convex/auth.config.ts` is not bootstrap-safe. Use `providers: [getAuthConfigProvider()]`, deploy once, push env, and keep that dynamic provider form.
 
 ---
 
@@ -676,11 +660,7 @@ import type { AuthConfig } from "convex/server";
 import { getAuthConfigProvider } from "kitcn/auth/config";
 
 export default {
-  providers: [
-    process.env.JWKS
-      ? getAuthConfigProvider({ jwks: process.env.JWKS })
-      : getAuthConfigProvider(),
-  ],
+  providers: [getAuthConfigProvider()],
 } satisfies AuthConfig;
 ```
 
@@ -853,7 +833,7 @@ Keep billing isolated so projects that do not need payments can remove it cleanl
 | Generated auth is disabled | Missing `convex/auth.ts` | Add auth config and run KitCN codegen |
 | Google OAuth redirects fail | OAuth callback mismatch | Confirm Google console callback matches site origin and auth route |
 | `generated/auth:getLatestJwks` missing | Auth functions not pushed yet | Run first bootstrap flow in §6 |
-| Codegen says `JWKS` is used but unset | Static-JWKS config before first push | Temporarily use dynamic provider, push functions, run `kitcn env push`, then restore static fallback |
+| Codegen says `JWKS` is used but unset | `convex/auth.config.ts` depends on static JWKS before first push | Keep `providers: [getAuthConfigProvider()]`, push functions, then run `kitcn env push` |
 
 Useful commands:
 
@@ -963,5 +943,5 @@ Initial OAuth          -> Google only
 Optional modules       -> app-auth.config.ts for auth, isolated config/env for SaaS modules
 Codegen                -> npx kitcn codegen
 Env sync               -> npx kitcn env push
-First JWKS bootstrap   -> codegen -> convex dev --once -> kitcn env push -> restore static JWKS -> codegen
+First JWKS bootstrap   -> codegen -> convex dev --once -> kitcn env push -> codegen -> convex dev --once
 ```
