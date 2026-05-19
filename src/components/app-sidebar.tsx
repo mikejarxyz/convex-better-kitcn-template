@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboardIcon,
-  SettingsIcon,
-} from "lucide-react";
+import { LayoutDashboardIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { AppMark } from "@/components/app-mark";
@@ -34,7 +31,6 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { title: "Dashboard", url: ROUTES.APP.ROOT, icon: LayoutDashboardIcon },
-  { title: "Settings", url: ROUTES.APP.SETTINGS, icon: SettingsIcon },
 ];
 
 function isRouteActive(pathname: string, url: string) {

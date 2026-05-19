@@ -22,7 +22,7 @@ The template should be self-contained. It should not depend on another product a
 10. [Auth Configuration](#10-auth-configuration)
 11. [Authorization Patterns](#11-authorization-patterns)
 12. [Route Protection](#12-route-protection)
-13. [Phase 2 Modules](#13-phase-2-modules)
+13. [Optional Modules](#13-optional-modules)
 14. [Troubleshooting](#14-troubleshooting)
 15. [Verification Checklist](#15-verification-checklist)
 16. [Convex Rules](#16-convex-rules)
@@ -44,15 +44,13 @@ This repository is a reusable app starter. A new project created from it should 
 | Protected UI | `/app` layout with sidebar, top bar, breadcrumbs, theme, toaster, `AppAuthGate` |
 | Security boundary | Convex functions derive identity with `ctx.auth.getUserIdentity()` |
 
-Out of scope for the initial shell:
+Feature-gated in the starter shell:
 
-- Resend transactional email
-- Two-factor authentication
-- Passkeys
-- Polar billing
-- Product-specific routes, tables, assets, copy, or integrations
+- Credentials, Google OAuth, account profile editing, linked accounts, two-factor authentication, and passkeys are controlled from `app-auth.config.ts`.
+- UI should read `AUTH_FEATURES` instead of hard-coding whether auth features are enabled.
+- Server-side Better Auth and Convex configuration must still match the enabled feature set.
 
-Those belong in [Phase 2](#12-phase-2-modules).
+Out of scope for the reusable shell: product-specific routes, tables, assets, copy, and integrations. Larger SaaS capabilities such as billing and transactional email belong in [Optional Modules](#13-optional-modules).
 
 ---
 
@@ -97,23 +95,25 @@ Required for the first reusable GitHub template:
 - shadcn initialized
 - Root provider stack
 - `/sign-in`, `/sign-up`
-- Protected `/app`, `/app/account`, `/app/settings`
+- Protected `/app`, `/app/account`
 - `AppAuthGate`
 - App shell sidebar/top bar/content layout
 - One protected Convex query proving authenticated access
 - `.env.example`
 - Lint/build verification
 
-### Phase 2: Extended SaaS Modules
+### Optional Modules
 
-Add after the initial shell is stable:
+The repository may include optional auth modules, but they should be controlled from `app-auth.config.ts` so a new app can quickly switch them on or off:
 
-- Resend email verification and password reset
-- Two-factor authentication
-- Passkeys
-- Polar billing
+- `AUTH_CONFIG.providers.credentials`
+- `AUTH_CONFIG.providers.google`
+- `AUTH_CONFIG.account.profile`
+- `AUTH_CONFIG.account.linkedAccounts`
+- `AUTH_CONFIG.security.twoFactor`
+- `AUTH_CONFIG.security.passkeys`
 
-Keep Phase 2 optional and removable. The base template should not require Resend, 2FA, passkeys, or Polar credentials to run.
+Keep non-auth SaaS modules optional and removable. The base template should not require Resend or Polar credentials to run.
 
 ---
 
@@ -243,7 +243,6 @@ Create:
 - `src/app/app/layout.tsx`
 - `src/app/app/page.tsx`
 - `src/app/app/account/page.tsx`
-- `src/app/app/settings/page.tsx`
 - `src/components/app-auth-gate.tsx`
 - `src/components/app-shell.tsx`
 - `src/components/app-sidebar.tsx`
@@ -421,7 +420,7 @@ If codegen fails because `JWKS` is referenced but missing, temporarily use the d
 | `GOOGLE_CLIENT_SECRET` | Yes for Phase 1 OAuth | Google OAuth client secret |
 | `AUTH_EXTRA_ORIGINS` | No | Comma-separated extra origins for alternate local ports/tunnels |
 
-### Phase 2 Env
+### Optional Module Env
 
 | Variable | Module |
 | --- | --- |
@@ -475,7 +474,6 @@ The scheme, host, and port must match. If Next runs on `http://localhost:3001` b
 | `src/app/app/layout.tsx` | Protected app layout |
 | `src/app/app/page.tsx` | Dashboard placeholder |
 | `src/app/app/account/page.tsx` | Account page |
-| `src/app/app/settings/page.tsx` | Settings placeholder |
 | `src/app/sign-in/page.tsx` | Sign-in UI |
 | `src/app/sign-up/page.tsx` | Sign-up UI |
 | `src/components/app-auth-gate.tsx` | Client auth gate |
@@ -497,7 +495,7 @@ The scheme, host, and port must match. If Next runs on `http://localhost:3001` b
 | `src/components/ui/*` | shadcn primitives |
 | `src/lib/utils.ts` | `cn()` helper |
 
-### Phase 2 Optional
+### Optional Modules
 
 | File | Module |
 | --- | --- |
@@ -545,7 +543,6 @@ src/app/app/layout.tsx
 | `/sign-up` | Registration and Google sign-up |
 | `/app` | Authenticated dashboard |
 | `/app/account` | Account and session controls |
-| `/app/settings` | Settings placeholder |
 
 ### Redirect Policy
 
@@ -570,12 +567,36 @@ Keep these easy to replace:
 
 ## 10. Auth Configuration
 
-### Phase 1 Server Auth
+### Feature Flags
+
+`app-auth.config.ts` is the template-level source of truth for optional auth UI. Keep feature checks centralized there:
+
+```ts
+export const AUTH_CONFIG = {
+  providers: {
+    credentials: true,
+    google: true,
+  },
+  account: {
+    profile: true,
+    linkedAccounts: true,
+  },
+  security: {
+    passkeys: true,
+    twoFactor: true,
+  },
+} as const;
+```
+
+Use `AUTH_FEATURES` in pages and components rather than duplicating feature decisions. When a feature is disabled, its UI entry points should disappear and routes should redirect or render an unavailable state. When a feature is enabled, confirm the matching Better Auth server plugin, client plugin, routes, and environment variables are wired.
+
+### Server Auth
 
 `convex/auth.ts` should include:
 
 - Email/password auth
 - Google OAuth provider
+- Feature plugins that match `app-auth.config.ts`
 - `convex({ authConfig, jwks })`
 - `baseURL: process.env.SITE_URL!`
 - `trustedOrigins: [process.env.SITE_URL!, ...extraOrigins]`
@@ -615,15 +636,16 @@ export default defineAuth(() => ({
 }));
 ```
 
-### Phase 1 Client Auth
+### Client Auth
 
 `src/lib/convex/auth-client.ts` should include:
 
 - `createAuthClient`
 - `baseURL: process.env.NEXT_PUBLIC_SITE_URL!`
 - `convexClient()`
+- Feature client plugins that match `app-auth.config.ts`
 
-Do not include 2FA or passkey client plugins until Phase 2.
+Feature-gated UI should import from `src/config/auth.ts`, which re-exports the root `app-auth.config.ts`.
 
 ### Convex HTTP
 
@@ -760,9 +782,9 @@ Every protected query, mutation, and action must enforce identity server-side.
 
 ---
 
-## 13. Phase 2 Modules
+## 13. Optional Modules
 
-Phase 2 adds SaaS features after the base shell is stable.
+Optional modules should either be controlled by `app-auth.config.ts` for auth features or isolated behind their own config/env gates for product modules. A new app should be able to disable unused modules without editing unrelated shell code.
 
 ### Resend Email
 
@@ -784,7 +806,7 @@ The base template should run without Resend configured.
 
 ### Two-Factor Authentication
 
-Adds:
+Controlled by `AUTH_CONFIG.security.twoFactor`. When enabled, it uses:
 
 - Better Auth `twoFactor` server plugin
 - `twoFactorClient` client plugin
@@ -792,18 +814,18 @@ Adds:
 - Account page controls for setup/disable
 - Backup codes if supported by the chosen Better Auth config
 
-Do not include 2FA client plugin in Phase 1.
+When disabled, hide account controls and prevent the 2FA challenge route from being part of normal auth flow.
 
 ### Passkeys
 
-Adds:
+Controlled by `AUTH_CONFIG.security.passkeys`. When enabled, it uses:
 
 - Better Auth `passkey` server plugin
 - `passkeyClient` client plugin
 - Account page passkey management
 - Passkey sign-in option
 
-Passkey RP settings must derive from `SITE_URL` and app branding.
+When disabled, hide passkey sign-in and account controls. Passkey RP settings must derive from `SITE_URL` and app branding.
 
 ### Polar Billing
 
@@ -875,12 +897,13 @@ pnpm run build
 - [ ] Protected Convex query returns data when signed in
 - [ ] Protected Convex query rejects when signed out
 
-### Phase 2
+### Optional Modules
 
 - [ ] Resend email verification
 - [ ] Password reset
-- [ ] 2FA setup and challenge
-- [ ] Passkey registration and login
+- [ ] Enabled auth features in `app-auth.config.ts` match server/client plugins
+- [ ] 2FA setup and challenge, if enabled
+- [ ] Passkey registration and login, if enabled
 - [ ] Polar checkout/portal in sandbox
 - [ ] Polar webhook handling
 
@@ -937,7 +960,7 @@ Convex HTTP target     -> NEXT_PUBLIC_CONVEX_SITE_URL
 Better Auth base URL   -> Convex SITE_URL
 Security boundary      -> requireIdentity() in Convex
 Initial OAuth          -> Google only
-Phase 2 modules        -> Resend, 2FA, passkeys, Polar
+Optional modules       -> app-auth.config.ts for auth, isolated config/env for SaaS modules
 Codegen                -> npx kitcn codegen
 Env sync               -> npx kitcn env push
 First JWKS bootstrap   -> codegen -> convex dev --once -> kitcn env push -> restore static JWKS -> codegen

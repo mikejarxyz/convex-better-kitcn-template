@@ -14,6 +14,5 @@ export const ROUTES = {
     ROOT: "/app",
     HOME: "/app",
     ACCOUNT: "/app/account",
-    SETTINGS: "/app/settings",
   },
 } as const;

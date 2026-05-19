@@ -16,7 +16,6 @@ import {
 
 const staticLabels: Record<string, string> = {
   account: "Account",
-  settings: "Settings",
 };
 
 export function AppBreadcrumbs() {
