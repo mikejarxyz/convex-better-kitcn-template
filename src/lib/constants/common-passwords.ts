@@ -1,0 +1,17 @@
+export const COMMON_PASSWORDS = new Set([
+  "password","password1","password2","password123","password12","passw0rd",
+  "123456","1234567","12345678","123456789","1234567890","12345","1234","123",
+  "111111","000000","123123","654321","112233","121212","123321","696969",
+  "qwerty","qwerty123","qwerty1","qwertyuiop","qazwsx","1qaz2wsx","1q2w3e4r",
+  "abc123","abc1234","abcd1234","test123","pass123","pass1234","admin123",
+  "letmein","login","welcome","welcome1","master","dragon","monkey","shadow",
+  "sunshine","iloveyou","trustno1","superman","batman","starwars","pokemon",
+  "football","baseball","soccer","hockey","basketball","golf","nascar",
+  "michael","jessica","daniel","andrew","joshua","hunter","george","thomas",
+  "charlie","jordan","harley","ranger","mustang","corvette","lincoln","toyota",
+  "princess","ashley","hannah","jennifer","maggie","ginger","pepper","tigger",
+  "buster","snoopy","cookie","ninja","matrix","diablo","computer","cheese",
+  "butter","tequila","monster","summer","hello","please","solo","test",
+  "admin","root","pass","love","jesus","alpine","azerty","passwd","toor",
+  "zxcvbn","987654","654321","112233","0987654321","1111","2222","3333",
+]);
