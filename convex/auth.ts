@@ -4,6 +4,7 @@ import { convex } from 'kitcn/auth';
 import { AUTH_FEATURES } from '../app-auth.config';
 import authConfig from './auth.config';
 import { defineAuth } from './generated/auth';
+import { getAuthJwks } from './lib/env';
 
 export default defineAuth(() => ({
   emailAndPassword: {
@@ -23,7 +24,7 @@ export default defineAuth(() => ({
   plugins: [
     convex({
       authConfig,
-      jwks: process.env.JWKS,
+      jwks: getAuthJwks(),
     }),
     lastLoginMethod(),
     ...(AUTH_FEATURES.passkeys

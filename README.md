@@ -144,17 +144,24 @@ including the port.
 
 ### KitCN / JWKS Bootstrap
 
-This template keeps `convex/auth.config.ts` bootstrap-safe by using KitCN's
-dynamic JWKS provider:
+This template reads `JWKS` through KitCN's typed environment helper and uses
+the static key set when it exists, with the dynamic endpoint as the clean
+bootstrap fallback:
 
 ```ts
-providers: [getAuthConfigProvider()]
+const jwks = getAuthJwks()
+
+providers: [
+  jwks ? getAuthConfigProvider({ jwks }) : getAuthConfigProvider(),
+]
 ```
 
-Do not make a clean setup depend on `process.env.JWKS` in
-`convex/auth.config.ts`. A brand-new Convex deployment cannot have `JWKS` until
-KitCN has generated auth functions, those functions have been pushed, and
-`kitcn env push` has called `generated/auth:getLatestJwks`.
+Do not read `process.env.JWKS` directly in `convex/auth.config.ts`. A brand-new
+Convex deployment cannot have `JWKS` until KitCN has generated auth functions,
+those functions have been pushed, and `kitcn env push` has called
+`generated/auth:getLatestJwks`. The helper keeps that first pass safe; the final
+deploy automatically switches both Convex JWT verification and the Better Auth
+plugin to static JWKS.
 
 If `kitcn env push` fails with:
 

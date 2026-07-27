@@ -15,6 +15,7 @@ import type * as generated_auth from "../generated/auth.js";
 import type * as generated_server from "../generated/server.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_env from "../lib/env.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as shared_api from "../shared/api.js";
 import type * as things from "../things.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   "generated/server": typeof generated_server;
   http: typeof http;
   "lib/auth": typeof lib_auth;
+  "lib/env": typeof lib_env;
   "lib/errors": typeof lib_errors;
   "shared/api": typeof shared_api;
   things: typeof things;
