@@ -15,7 +15,7 @@ const plugins = [
     ? [
         twoFactorClient({
           onTwoFactorRedirect: () => {
-            window.location.href = "/sign-in/2fa";
+            window.location.replace("/sign-in/2fa");
           },
         }),
       ]
