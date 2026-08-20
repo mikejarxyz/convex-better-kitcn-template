@@ -20,28 +20,6 @@ function copyIfMissing(source, target) {
   log(`created ${target.replace(`${root}\\`, "").replace(`${root}/`, "")}`);
 }
 
-function ensureEnvValue(filePath, key, value) {
-  const content = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
-  const lines = content.length > 0 ? content.split(/\r?\n/) : [];
-  const keyPattern = new RegExp(`^${key}=`);
-  let found = false;
-
-  const nextLines = lines.map((line) => {
-    if (!keyPattern.test(line)) return line;
-    found = true;
-
-    const currentValue = line.slice(key.length + 1).trim();
-    return currentValue.length > 0 ? line : `${key}=${value}`;
-  });
-
-  if (!found) {
-    if (nextLines.length > 0 && nextLines.at(-1) !== "") nextLines.push("");
-    nextLines.push(`${key}=${value}`);
-  }
-
-  writeFileSync(filePath, `${nextLines.join("\n").replace(/\n+$/, "")}\n`);
-}
-
 function run(command, args) {
   log(`${command} ${args.join(" ")}`);
   const result = spawnSync(command, args, {
@@ -61,10 +39,9 @@ const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 copyIfMissing(join(root, ".env.example"), join(root, ".env.local"));
 copyIfMissing(join(root, "convex", ".env.example"), join(root, "convex", ".env"));
 
-ensureEnvValue(join(root, "convex", ".env"), "DEPLOY_ENV", "development");
-ensureEnvValue(join(root, "convex", ".env"), "SITE_URL", "http://localhost:3000");
-
 run(pnpm, ["exec", "convex", "dev", "--once"]);
+run(pnpm, ["exec", "convex", "env", "set", "DEPLOY_ENV", "development"]);
+run(pnpm, ["exec", "convex", "env", "set", "SITE_URL", "http://localhost:3000"]);
 run(pnpm, ["exec", "kitcn", "codegen"]);
 run(pnpm, ["exec", "convex", "dev", "--once"]);
 run(pnpm, ["exec", "kitcn", "env", "push"]);

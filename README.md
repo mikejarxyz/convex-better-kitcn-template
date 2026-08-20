@@ -44,8 +44,8 @@ The script:
 
 - creates `.env.local` from `.env.example` if missing
 - creates `convex/.env` from `convex/.env.example` if missing
-- ensures `DEPLOY_ENV=development` and `SITE_URL=http://localhost:3000`
 - creates or links the Convex dev deployment
+- sets `DEPLOY_ENV=development` and `SITE_URL=http://localhost:3000` directly on that dev deployment
 - runs KitCN codegen
 - deploys generated Convex functions
 - pushes KitCN-managed auth env, including `BETTER_AUTH_SECRET` and `JWKS`
@@ -73,18 +73,24 @@ Create or link the Convex dev deployment. This fills `CONVEX_DEPLOYMENT`,
 pnpm exec convex dev --once
 ```
 
-Create Convex deployment env for auth. At minimum, local auth needs the browser
-origin in `SITE_URL`.
+Create `convex/.env` for KitCN-managed shared auth values only:
 
 ```bash
-mkdir -p convex
-printf "DEPLOY_ENV=development\nSITE_URL=http://localhost:3000\n" > convex/.env
+cp convex/.env.example convex/.env
 ```
 
 On PowerShell:
 
 ```powershell
-Set-Content convex\.env "DEPLOY_ENV=development`nSITE_URL=http://localhost:3000"
+Copy-Item convex\.env.example convex\.env
+```
+
+Set deployment-specific auth values directly on the active Convex dev
+deployment. At minimum, local auth needs the browser origin in `SITE_URL`:
+
+```bash
+pnpm exec convex env set DEPLOY_ENV development
+pnpm exec convex env set SITE_URL http://localhost:3000
 ```
 
 Generate KitCN auth/runtime files and deploy the generated Convex functions:
@@ -120,23 +126,31 @@ pnpm run build
 Copy `.env.example` to `.env.local` and let `pnpm exec convex dev --once`
 fill in the Convex values.
 
-Convex deployment env lives in `convex/.env` locally and is pushed with
-`pnpm exec kitcn env push`.
+`convex/.env` is only for KitCN-managed shared auth values such as
+`BETTER_AUTH_SECRET` and `JWKS`; it is pushed with `pnpm exec kitcn env push`.
+Do not put deployment-specific values in this file. `kitcn env push --prod`
+pushes every entry from `convex/.env`, so values such as a development
+`SITE_URL` or `DEPLOY_ENV` would conflict with or overwrite production config.
+If upgrading an existing checkout, remove any deployment-specific entries from
+`convex/.env` after setting their equivalents directly on the appropriate
+Convex deployments.
 
-Required local values:
+Configure deployment-specific values directly on each Convex deployment. For
+the active development deployment:
 
 ```bash
-DEPLOY_ENV=development
-SITE_URL=http://localhost:3000
+pnpm exec convex env set DEPLOY_ENV development
+pnpm exec convex env set SITE_URL http://localhost:3000
 ```
 
-Optional auth provider values:
+Google OAuth is enabled by default, so configure its credentials on each
+deployment that uses it. Email provider values are optional:
 
 ```bash
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-RESEND_API_KEY=
-EMAIL_FROM=
+pnpm exec convex env set GOOGLE_CLIENT_ID
+pnpm exec convex env set GOOGLE_CLIENT_SECRET
+pnpm exec convex env set RESEND_API_KEY
+pnpm exec convex env set EMAIL_FROM
 ```
 
 `SITE_URL` must match `NEXT_PUBLIC_SITE_URL` and the browser origin exactly,
@@ -178,17 +192,30 @@ pnpm exec kitcn env push
 ```
 
 If `generated/auth:getLatestJwks` exists but crashes during env push, confirm
-`convex/.env` has `SITE_URL=http://localhost:3000`, then rerun:
+the active deployment has the correct `SITE_URL`, then rerun:
 
 ```bash
+pnpm exec convex env get SITE_URL
 pnpm exec kitcn env push
 ```
 
-For production, deploy first, then push production auth env:
+Before bootstrapping production auth, configure `SITE_URL`, `DEPLOY_ENV`, OAuth
+credentials, email credentials, and any other deployment-specific values
+directly on the production deployment. For example:
 
 ```bash
-pnpm exec convex deploy --prod
+pnpm exec convex env set --prod DEPLOY_ENV production
+pnpm exec convex env set --prod SITE_URL https://app.example.com
+```
+
+Then deploy the bootstrap auth functions, push only the KitCN-managed shared
+auth values, regenerate against the resulting JWKS, and deploy again:
+
+```bash
+pnpm exec convex deploy
 pnpm exec kitcn env push --prod
+pnpm exec kitcn codegen
+pnpm exec convex deploy
 ```
 
 Use `app-auth.config.ts` to control which auth features appear in the UI. When enabling or disabling deeper auth capabilities, keep the Better Auth server/client plugin setup in sync.

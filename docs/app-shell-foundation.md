@@ -300,6 +300,7 @@ KitCN auth has a one-time bootstrap ordering requirement for new Convex deployme
 1. The generated auth functions must exist in Convex before `kitcn env push` can call `generated/auth:getLatestJwks`.
 2. The static `JWKS` env value should be pushed after those functions exist.
 3. `convex/auth.config.ts` should read JWKS through KitCN's typed env helper, use the dynamic provider while it is missing, and automatically switch to the static provider after it is pushed.
+4. `convex/.env` must contain only KitCN-managed shared auth values. Configure `SITE_URL`, `DEPLOY_ENV`, provider credentials, and other deployment-specific values directly on each Convex deployment.
 
 ### First Bootstrap for a New Template Deployment
 
@@ -358,12 +359,27 @@ Use `kitcn env push` again when adding auth plugins, rotating keys, or repairing
 pnpm exec kitcn env push --rotate
 ```
 
-For production:
+Before production bootstrap, configure all deployment-specific values directly
+on the production deployment. Never put development values such as
+`SITE_URL=http://localhost:3000` or `DEPLOY_ENV=development` in `convex/.env`:
 
 ```bash
-pnpm exec convex deploy --prod
-pnpm exec kitcn env push --prod
+pnpm exec convex env set --prod DEPLOY_ENV production
+pnpm exec convex env set --prod SITE_URL https://app.example.com
 ```
+
+Then use the complete production JWKS bootstrap flow:
+
+```bash
+pnpm exec convex deploy
+pnpm exec kitcn env push --prod
+pnpm exec kitcn codegen
+pnpm exec convex deploy
+```
+
+`kitcn env push --prod` pushes every entry in `convex/.env`. Keep that file
+limited to KitCN-managed shared auth values (`BETTER_AUTH_SECRET` and `JWKS`) so
+it cannot conflict with or overwrite production-specific configuration.
 
 ### Common Bootstrap Failure
 
@@ -395,21 +411,25 @@ If codegen fails because `JWKS` is referenced but missing, `convex/auth.config.t
 | `NEXT_PUBLIC_CONVEX_URL` | Yes | Convex client WebSocket URL |
 | `NEXT_PUBLIC_CONVEX_SITE_URL` | Yes | Convex HTTP site URL for KitCN proxy |
 | `NEXT_PUBLIC_SITE_URL` | Yes | Browser app origin and Better Auth client base URL |
-| `GOOGLE_CLIENT_ID` | Yes for Phase 1 OAuth | Google OAuth client id |
-| `GOOGLE_CLIENT_SECRET` | Yes for Phase 1 OAuth | Google OAuth client secret |
 
 ### Convex Deployment Env
 
+Configure these values directly on each deployment with
+`pnpm exec convex env set` (add `--prod` for production). Do not store them in
+`convex/.env`.
+
 | Variable | Required | Role |
 | --- | --- | --- |
+| `DEPLOY_ENV` | Yes | Deployment class, such as `development` or `production` |
 | `SITE_URL` | Yes | Better Auth base URL, trusted origin, CORS origin |
-| `BETTER_AUTH_SECRET` | Yes | Better Auth secret pushed by KitCN |
-| `JWKS` | Yes for deployed auth | Static JWKS JSON pushed by KitCN |
 | `GOOGLE_CLIENT_ID` | Yes for Phase 1 OAuth | Google OAuth client id |
 | `GOOGLE_CLIENT_SECRET` | Yes for Phase 1 OAuth | Google OAuth client secret |
 | `AUTH_EXTRA_ORIGINS` | No | Comma-separated extra origins for alternate local ports/tunnels |
 
 ### Optional Module Env
+
+These are also deployment-specific and should be configured directly on each
+Convex deployment, not in `convex/.env`.
 
 | Variable | Module |
 | --- | --- |
@@ -417,6 +437,20 @@ If codegen fails because `JWKS` is referenced but missing, `convex/auth.config.t
 | `EMAIL_FROM` | Resend email |
 | `POLAR_ACCESS_TOKEN` | Polar billing |
 | `POLAR_SERVER` | Polar billing, `sandbox` or `production` |
+
+### `convex/.env`
+
+This file is reserved for KitCN-managed shared auth values pushed by
+`pnpm exec kitcn env push`:
+
+```bash
+BETTER_AUTH_SECRET=
+JWKS=
+```
+
+Do not add `SITE_URL`, `DEPLOY_ENV`, OAuth credentials, email credentials, or
+other deployment-specific values. The production form of the command pushes
+every entry in this file to production.
 
 ### Origin Rule
 
