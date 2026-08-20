@@ -13,6 +13,7 @@ import type {
   QueryCtx as ServerQueryCtx,
 } from '../_generated/server';
 import { httpAction, internalMutation } from '../_generated/server';
+import { procedureNames } from './procedure-names.gen';
 
 export type QueryCtx = ServerQueryCtx;
 export type MutationCtx = ServerMutationCtx;
@@ -20,10 +21,7 @@ export type ActionCtx = ServerActionCtx;
 export type GenericCtx = QueryCtx | MutationCtx | ActionCtx;
 export type OrmCtx<Ctx = QueryCtx> = Ctx;
 
-registerProcedureNameLookup(
-  {},
-  "convex"
-);
+registerProcedureNameLookup(procedureNames, "convex");
 
 export function withOrm<Ctx extends ServerQueryCtx | ServerMutationCtx>(ctx: Ctx): OrmCtx<Ctx> {
   return ctx as OrmCtx<Ctx>;
