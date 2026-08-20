@@ -6,6 +6,7 @@ const envSchema = z.object({
 });
 
 export const getEnv = createEnv({
+  readOptionalRuntimeEnv: ['JWKS'],
   schema: envSchema,
 });
 
