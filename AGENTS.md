@@ -12,6 +12,16 @@ Convex agent skills for common tasks can be installed by running
 
 <!-- convex-ai-end -->
 
+## Local Convex development with kitcn
+
+This project uses kitcn on top of Convex. Always start the local backend with
+`pnpm exec kitcn dev` instead of `npx convex dev`. The kitcn command drives the
+Convex development process and also runs the project-specific code generation,
+migrations, aggregate backfills, and local auth/environment synchronization.
+
+Use the raw Convex CLI only for commands that kitcn does not wrap or when the
+kitcn documentation explicitly requires it.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
