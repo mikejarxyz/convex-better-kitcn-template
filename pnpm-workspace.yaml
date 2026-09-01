@@ -15,4 +15,4 @@ overrides:
   brace-expansion@5: 5.0.9
 
 minimumReleaseAgeExclude:
-  - kitcn@0.25.7
+  - kitcn@0.32.1

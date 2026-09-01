@@ -186,7 +186,7 @@ Install and scaffold KitCN + Better Auth for Convex:
 
 ```bash
 pnpm add kitcn better-auth convex
-npx kitcn codegen
+pnpm exec kitcn codegen
 ```
 
 Expected Convex auth files:
@@ -285,11 +285,11 @@ Keep Better Auth-owned tables in `convex/authSchema.ts`. For real app domains, p
 Run:
 
 ```bash
-pnpm run lint
-pnpm run build
+pnpm run check
 ```
 
-Then verify auth in the browser against running `pnpm dev` and `npx convex dev`.
+Then verify auth in the browser against running `pnpm dev` and
+`pnpm exec kitcn dev`.
 
 ---
 
@@ -328,6 +328,10 @@ pnpm exec convex dev --once
 pnpm exec kitcn env push
 ```
 
+The raw `convex dev --once` command above is a first-bootstrap fallback used to
+push functions before the generated JWKS exists. Use `pnpm exec kitcn dev` for
+the normal local backend loop.
+
 What each command does:
 
 | Command | Purpose |
@@ -348,12 +352,12 @@ pnpm exec convex dev --once
 After the first bootstrap succeeds:
 
 ```bash
-pnpm exec kitcn codegen
-pnpm exec convex dev --once
-pnpm exec kitcn env push
+pnpm exec kitcn dev
 ```
 
-Use `kitcn env push` again when adding auth plugins, rotating keys, or repairing a deployment. Key rotation signs users out:
+KitCN now owns Convex, codegen, migrations, aggregate backfills, and local env
+sync. Use `kitcn env push` again for explicit repair or key rotation. Key
+rotation signs users out:
 
 ```bash
 pnpm exec kitcn env push --rotate
@@ -364,17 +368,17 @@ on the production deployment. Never put development values such as
 `SITE_URL=http://localhost:3000` or `DEPLOY_ENV=development` in `convex/.env`:
 
 ```bash
-pnpm exec convex env set --prod DEPLOY_ENV production
-pnpm exec convex env set --prod SITE_URL https://app.example.com
+pnpm exec kitcn env set --prod DEPLOY_ENV production
+pnpm exec kitcn env set --prod SITE_URL https://app.example.com
 ```
 
 Then use the complete production JWKS bootstrap flow:
 
 ```bash
-pnpm exec convex deploy
+pnpm exec kitcn deploy --prod
 pnpm exec kitcn env push --prod
 pnpm exec kitcn codegen
-pnpm exec convex deploy
+pnpm exec kitcn deploy --prod
 ```
 
 `kitcn env push --prod` pushes every entry in `convex/.env`. Keep that file
@@ -415,7 +419,7 @@ If codegen fails because `JWKS` is referenced but missing, `convex/auth.config.t
 ### Convex Deployment Env
 
 Configure these values directly on each deployment with
-`pnpm exec convex env set` (add `--prod` for production). Do not store them in
+`pnpm exec kitcn env set` (add `--prod` for production). Do not store them in
 `convex/.env`.
 
 | Variable | Required | Role |
@@ -874,7 +878,7 @@ Keep billing isolated so projects that do not need payments can remove it cleanl
 | --- | --- | --- |
 | `Failed to fetch` on sign-in | Origin mismatch | Align `SITE_URL`, `NEXT_PUBLIC_SITE_URL`, and browser URL |
 | CORS error from Convex site | Origin missing from allowed list | Update `SITE_URL` or `AUTH_EXTRA_ORIGINS` |
-| `getUserIdentity()` is always null | Missing/wrong `auth.config.ts` or JWKS | Run `npx kitcn env push`; verify `JWKS` |
+| `getUserIdentity()` is always null | Missing/wrong `auth.config.ts` or JWKS | Run `pnpm exec kitcn env push`; verify `JWKS` |
 | Auth UI works but Convex queries fail | Convex client is not auth-wrapped | Confirm `ConvexAuthProvider` wraps app |
 | Generated auth is disabled | Missing `convex/auth.ts` | Add auth config and run KitCN codegen |
 | Google OAuth redirects fail | OAuth callback mismatch | Confirm Google console callback matches site origin and auth route |
@@ -884,11 +888,9 @@ Keep billing isolated so projects that do not need payments can remove it cleanl
 Useful commands:
 
 ```bash
-pnpm exec kitcn codegen
-pnpm exec convex dev --once
+pnpm exec kitcn dev
 pnpm exec kitcn env push
-pnpm run lint
-pnpm run build
+pnpm run check
 ```
 
 ---
@@ -901,7 +903,7 @@ pnpm run build
 - [ ] `pnpm run lint`
 - [ ] `pnpm run build`
 - [ ] Convex codegen succeeds
-- [ ] `pnpm exec convex dev --once` succeeds
+- [ ] `pnpm exec kitcn dev` starts successfully
 - [ ] `pnpm exec kitcn env push` succeeds after auth functions are deployed
 - [ ] `convex/_generated/ai/guidelines.md` exists
 - [ ] `components.json` exists
@@ -972,6 +974,7 @@ Rules to preserve:
 | Better Auth Convex | https://better-auth.com/docs/integrations/convex |
 | Convex auth in functions | https://docs.convex.dev/auth/functions-auth |
 | Next.js authentication guide | https://nextjs.org/docs/app/guides/authentication |
+| Local auth stack upgrade runbook | ./auth-stack-upgrades.md |
 | Local Convex organization pattern | ./convex-organization-pattern.md |
 | Local Convex error handling | ./convex-error-handling.md |
 
@@ -987,7 +990,8 @@ Better Auth base URL   -> Convex SITE_URL
 Security boundary      -> requireIdentity() in Convex
 Initial OAuth          -> Google only
 Optional modules       -> app-auth.config.ts for auth, isolated config/env for SaaS modules
-Codegen                -> npx kitcn codegen
-Env sync               -> npx kitcn env push
+Local backend          -> pnpm exec kitcn dev
+Codegen fallback       -> pnpm exec kitcn codegen
+Env repair/rotation    -> pnpm exec kitcn env push
 First JWKS bootstrap   -> codegen -> convex dev --once -> kitcn env push -> codegen -> convex dev --once
 ```

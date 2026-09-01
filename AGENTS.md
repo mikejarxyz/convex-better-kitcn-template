@@ -22,6 +22,9 @@ migrations, aggregate backfills, and local auth/environment synchronization.
 Use the raw Convex CLI only for commands that kitcn does not wrap or when the
 kitcn documentation explicitly requires it.
 
+Before changing KitCN, Better Auth, their auth schema, or the Convex version,
+follow `docs/auth-stack-upgrades.md`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

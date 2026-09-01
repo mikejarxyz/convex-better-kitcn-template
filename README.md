@@ -25,6 +25,7 @@ The template gives you a working authenticated app shell so new projects can sta
 - `docs/app-shell-foundation.md` - full template architecture and setup notes
 - `docs/convex-organization-pattern.md` - preferred Convex module layout
 - `docs/convex-error-handling.md` - structured Convex error conventions
+- `docs/auth-stack-upgrades.md` - KitCN, Better Auth, and Convex upgrade runbook
 
 ## Development
 
@@ -55,8 +56,13 @@ Then run the app and the long-running Convex dev server:
 
 ```bash
 pnpm dev
-pnpm exec convex dev
+pnpm exec kitcn dev
 ```
+
+KitCN owns the normal Convex development loop for this repository. It runs
+Convex plus project codegen, migrations, aggregate backfills, and local auth/env
+sync. Use raw Convex commands only for operations KitCN does not wrap or for the
+explicit first-bootstrap recovery steps below.
 
 Manual setup commands, if you do not want to use the script:
 
@@ -68,6 +74,7 @@ cp .env.example .env.local
 
 Create or link the Convex dev deployment. This fills `CONVEX_DEPLOYMENT`,
 `NEXT_PUBLIC_CONVEX_URL`, and `NEXT_PUBLIC_CONVEX_SITE_URL` in `.env.local`.
+This is the first-bootstrap exception to the normal KitCN-owned dev loop.
 
 ```bash
 pnpm exec convex dev --once
@@ -89,11 +96,12 @@ Set deployment-specific auth values directly on the active Convex dev
 deployment. At minimum, local auth needs the browser origin in `SITE_URL`:
 
 ```bash
-pnpm exec convex env set DEPLOY_ENV development
-pnpm exec convex env set SITE_URL http://localhost:3000
+pnpm exec kitcn env set DEPLOY_ENV development
+pnpm exec kitcn env set SITE_URL http://localhost:3000
 ```
 
-Generate KitCN auth/runtime files and deploy the generated Convex functions:
+Generate KitCN auth/runtime files and deploy the generated Convex functions.
+For this one-shot bootstrap fallback, the raw Convex command is intentional:
 
 ```bash
 pnpm exec kitcn codegen
@@ -117,8 +125,7 @@ pnpm exec convex dev --once
 Verify before shipping template changes:
 
 ```bash
-pnpm run lint
-pnpm run build
+pnpm run check
 ```
 
 ## Configuration
@@ -139,18 +146,18 @@ Configure deployment-specific values directly on each Convex deployment. For
 the active development deployment:
 
 ```bash
-pnpm exec convex env set DEPLOY_ENV development
-pnpm exec convex env set SITE_URL http://localhost:3000
+pnpm exec kitcn env set DEPLOY_ENV development
+pnpm exec kitcn env set SITE_URL http://localhost:3000
 ```
 
 Google OAuth is enabled by default, so configure its credentials on each
 deployment that uses it. Email provider values are optional:
 
 ```bash
-pnpm exec convex env set GOOGLE_CLIENT_ID
-pnpm exec convex env set GOOGLE_CLIENT_SECRET
-pnpm exec convex env set RESEND_API_KEY
-pnpm exec convex env set EMAIL_FROM
+pnpm exec kitcn env set GOOGLE_CLIENT_ID
+pnpm exec kitcn env set GOOGLE_CLIENT_SECRET
+pnpm exec kitcn env set RESEND_API_KEY
+pnpm exec kitcn env set EMAIL_FROM
 ```
 
 `SITE_URL` must match `NEXT_PUBLIC_SITE_URL` and the browser origin exactly,
@@ -195,7 +202,7 @@ If `generated/auth:getLatestJwks` exists but crashes during env push, confirm
 the active deployment has the correct `SITE_URL`, then rerun:
 
 ```bash
-pnpm exec convex env get SITE_URL
+pnpm exec kitcn env get SITE_URL
 pnpm exec kitcn env push
 ```
 
@@ -204,18 +211,21 @@ credentials, email credentials, and any other deployment-specific values
 directly on the production deployment. For example:
 
 ```bash
-pnpm exec convex env set --prod DEPLOY_ENV production
-pnpm exec convex env set --prod SITE_URL https://app.example.com
+pnpm exec kitcn env set --prod DEPLOY_ENV production
+pnpm exec kitcn env set --prod SITE_URL https://app.example.com
 ```
 
 Then deploy the bootstrap auth functions, push only the KitCN-managed shared
 auth values, regenerate against the resulting JWKS, and deploy again:
 
 ```bash
-pnpm exec convex deploy
+pnpm exec kitcn deploy --prod
 pnpm exec kitcn env push --prod
 pnpm exec kitcn codegen
-pnpm exec convex deploy
+pnpm exec kitcn deploy --prod
 ```
+
+For dependency and auth-schema upgrades, follow
+[`docs/auth-stack-upgrades.md`](docs/auth-stack-upgrades.md) before deploying.
 
 Use `app-auth.config.ts` to control which auth features appear in the UI. When enabling or disabling deeper auth capabilities, keep the Better Auth server/client plugin setup in sync.
