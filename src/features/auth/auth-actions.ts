@@ -3,7 +3,7 @@ import { OAuthProviderId } from "./oauth-providers";
 
 export type AuthAction =
   | { type: "changePassword" }
-  | { type: "unlinkOAuth"; provider: OAuthProviderId; accountId?: string }
+  | { type: "unlinkOAuth"; provider: OAuthProviderId; accountId: string }
   | { type: "primaryAuth" }
   | { type: "renamePasskey"; passkeyId: string }
   | { type: "deletePasskey"; passkeyId: string };
@@ -35,7 +35,7 @@ export function authMethodKey(method: AuthMethod) {
     case "password":
       return "password";
     case "oauth":
-      return `oauth:${method.providerId}:${method.accountId ?? "default"}`;
+      return `oauth:${method.providerId}:${method.accountId}`;
     case "passkey":
       return `passkey:${method.id}`;
   }

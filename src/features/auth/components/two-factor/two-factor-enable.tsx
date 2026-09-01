@@ -104,6 +104,7 @@ export function TwoFactorEnable({
 
     try {
       const result = await authClient.twoFactor.enable({
+        method: "totp",
         password: data.password,
       });
 
@@ -115,7 +116,7 @@ export function TwoFactorEnable({
         return;
       }
 
-      if (result.data) {
+      if (result.data?.method === "totp") {
         setTotpUri(result.data.totpURI);
         setSecret(extractSecretFromTotpUri(result.data.totpURI));
         setBackupCodes(result.data.backupCodes);

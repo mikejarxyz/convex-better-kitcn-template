@@ -2,77 +2,89 @@ import { defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
 export const authSchema = {
+  user: defineTable({
+    name: v.string(),
+    email: v.string(),
+    emailVerified: v.boolean(),
+    image: v.optional(v.union(v.null(), v.string())),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    userId: v.optional(v.union(v.null(), v.string())),
+    twoFactorEnabled: v.optional(v.union(v.null(), v.boolean())),
+    avatarStorageId: v.optional(v.id('_storage')),
+  })
+    .index('email_name', ['email', 'name'])
+    .index('name', ['name']),
+  session: defineTable({
+    expiresAt: v.number(),
+    token: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    ipAddress: v.optional(v.union(v.null(), v.string())),
+    userAgent: v.optional(v.union(v.null(), v.string())),
+    userId: v.string(),
+  })
+    .index('expiresAt', ['expiresAt'])
+    .index('expiresAt_userId', ['expiresAt', 'userId'])
+    .index('token', ['token'])
+    .index('userId', ['userId']),
   account: defineTable({
+    issuer: v.string(),
     accountId: v.string(),
     providerId: v.string(),
-    userId: v.id('user'),
-    accessToken: v.optional(v.string()),
-    refreshToken: v.optional(v.string()),
-    idToken: v.optional(v.string()),
-    accessTokenExpiresAt: v.optional(v.number()),
-    refreshTokenExpiresAt: v.optional(v.number()),
-    scope: v.optional(v.string()),
-    password: v.optional(v.string()),
+    userId: v.string(),
+    accessToken: v.optional(v.union(v.null(), v.string())),
+    refreshToken: v.optional(v.union(v.null(), v.string())),
+    idToken: v.optional(v.union(v.null(), v.string())),
+    accessTokenExpiresAt: v.optional(v.union(v.null(), v.number())),
+    refreshTokenExpiresAt: v.optional(v.union(v.null(), v.number())),
+    scope: v.optional(v.union(v.null(), v.string())),
+    password: v.optional(v.union(v.null(), v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index('accountId', ['accountId'])
     .index('accountId_providerId', ['accountId', 'providerId'])
+    .index('providerId_userId', ['providerId', 'userId'])
+    .index('issuer_accountId', ['issuer', 'accountId'])
     .index('userId', ['userId']),
-  jwks: defineTable({
-    publicKey: v.string(),
-    privateKey: v.string(),
-    createdAt: v.number(),
-  }),
-  session: defineTable({
-    token: v.string(),
-    expiresAt: v.number(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    ipAddress: v.optional(v.string()),
-    userAgent: v.optional(v.string()),
-    userId: v.id('user'),
-  })
-    .index('token', ['token'])
-    .index('userId', ['userId']),
-  user: defineTable({
-    name: v.optional(v.string()),
-    email: v.string(),
-    emailVerified: v.boolean(),
-    image: v.optional(v.string()),
-    avatarStorageId: v.optional(v.id('_storage')),
-    twoFactorEnabled: v.optional(v.boolean()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index('email', ['email']),
-  twoFactor: defineTable({
-    secret: v.string(),
-    backupCodes: v.string(),
-    userId: v.id('user'),
-    verified: v.optional(v.boolean()),
-  })
-    .index('secret', ['secret'])
-    .index('userId', ['userId']),
-  passkey: defineTable({
-    name: v.optional(v.string()),
-    publicKey: v.string(),
-    userId: v.id('user'),
-    credentialID: v.string(),
-    counter: v.number(),
-    deviceType: v.string(),
-    backedUp: v.boolean(),
-    transports: v.optional(v.string()),
-    createdAt: v.optional(v.number()),
-    aaguid: v.optional(v.string()),
-  })
-    .index('userId', ['userId'])
-    .index('credentialID', ['credentialID']),
   verification: defineTable({
     identifier: v.string(),
     value: v.string(),
     expiresAt: v.number(),
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-  }).index('identifier', ['identifier'])
-    .index('expiresAt', ['expiresAt']),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('expiresAt', ['expiresAt'])
+    .index('identifier', ['identifier']),
+  jwks: defineTable({
+    publicKey: v.string(),
+    privateKey: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.union(v.null(), v.number())),
+    alg: v.optional(v.union(v.null(), v.string())),
+    crv: v.optional(v.union(v.null(), v.string())),
+  }),
+  passkey: defineTable({
+    name: v.optional(v.union(v.null(), v.string())),
+    publicKey: v.string(),
+    userId: v.string(),
+    credentialID: v.string(),
+    counter: v.number(),
+    deviceType: v.string(),
+    backedUp: v.boolean(),
+    transports: v.optional(v.union(v.null(), v.string())),
+    createdAt: v.optional(v.union(v.null(), v.number())),
+    aaguid: v.optional(v.union(v.null(), v.string())),
+  })
+    .index('credentialID', ['credentialID'])
+    .index('userId', ['userId']),
+  twoFactor: defineTable({
+    secret: v.string(),
+    backupCodes: v.string(),
+    userId: v.string(),
+    verified: v.optional(v.union(v.null(), v.boolean())),
+    failedVerificationCount: v.optional(v.union(v.null(), v.number())),
+    lockedUntil: v.optional(v.union(v.null(), v.number())),
+  }).index('userId', ['userId']),
 };

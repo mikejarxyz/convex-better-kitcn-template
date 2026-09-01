@@ -46,6 +46,7 @@ export async function runOAuthAction({
         errorCallbackURL: resolveOAuthReturnTo(mode, returnTo),
       });
     case "unlink":
-      return await authClient.unlinkAccount({ providerId: provider, accountId });
+      if (!accountId) throw new Error("Account ID is required to unlink OAuth");
+      return await authClient.unlinkAccount({ accountId });
   }
 }

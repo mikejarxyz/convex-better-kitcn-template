@@ -62,8 +62,8 @@ type ActiveModal =
     }
   | null;
 
-async function unlinkOAuthProvider(providerId: string, accountId?: string) {
-  const result = await authClient.unlinkAccount({ providerId, accountId });
+async function unlinkOAuthProvider(accountId: string) {
+  const result = await authClient.unlinkAccount({ accountId });
   if (result?.error) {
     toast.error(result.error.message ?? "Failed to unlink provider.");
     throw new Error(result.error.message ?? "Failed to unlink provider.");
@@ -101,7 +101,7 @@ function actionToModal(action: AuthAction, method: AuthMethod): ActiveModal {
         description: "You can link it again later.",
         destructive: true,
         onConfirm: async () => {
-          await unlinkOAuthProvider(action.provider, action.accountId);
+          await unlinkOAuthProvider(action.accountId);
         },
       };
 
@@ -151,7 +151,7 @@ export default function AuthenticationMethodsList() {
     .map((account) => ({
       kind: "oauth" as const,
       providerId: account.providerId as keyof typeof OAUTH_PROVIDERS,
-      accountId: account.accountId,
+      accountId: account.id,
       connectedEmail: user?.email,
       connectedAt: account.createdAt
         ? new Date(account.createdAt).toISOString()

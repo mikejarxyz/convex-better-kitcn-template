@@ -7,7 +7,7 @@ export type AuthMethod =
   | {
       kind: "oauth";
       providerId: OAuthProviderId;
-      accountId?: string;
+      accountId: string;
       connectedEmail?: string;
       connectedAt?: string;
     };
