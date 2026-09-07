@@ -25,5 +25,11 @@ const plugins = [
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_SITE_URL!,
+  // Better Auth 1.7 marks signed-out sessions as pending during every focus
+  // refetch. Rapid visibility changes can then keep KitCN's auth gate loading.
+  // Auth mutations and cross-tab session signals still trigger refetches.
+  sessionOptions: {
+    refetchOnWindowFocus: false,
+  },
   plugins,
 });

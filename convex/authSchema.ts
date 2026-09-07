@@ -29,7 +29,9 @@ export const authSchema = {
     .index('token', ['token'])
     .index('userId', ['userId']),
   account: defineTable({
-    issuer: v.string(),
+    // Better Auth 1.7.3 stopped writing issuer, but keeping the field optional
+    // lets deployments upgraded through 1.7.0-1.7.2 retain existing values.
+    issuer: v.optional(v.string()),
     accountId: v.string(),
     providerId: v.string(),
     userId: v.string(),
@@ -46,7 +48,6 @@ export const authSchema = {
     .index('accountId', ['accountId'])
     .index('accountId_providerId', ['accountId', 'providerId'])
     .index('providerId_userId', ['providerId', 'userId'])
-    .index('issuer_accountId', ['issuer', 'accountId'])
     .index('userId', ['userId']),
   verification: defineTable({
     identifier: v.string(),

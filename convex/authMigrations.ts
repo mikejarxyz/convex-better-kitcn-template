@@ -13,6 +13,8 @@ export const backfillAccountIssuer = internalMutation({
   args: { paginationOpts: paginationOptsValidator },
   returns: migrationResult,
   handler: async (ctx, args) => {
+    // Historical migration for deployments moving from Better Auth 1.6 to
+    // 1.7.0-1.7.2. Do not run this after upgrading to 1.7.3 or newer.
     const page = await ctx.db
       .query('account')
       .order('asc')
@@ -67,8 +69,8 @@ export const rollbackAccountIssuer = internalMutation({
   args: { paginationOpts: paginationOptsValidator },
   returns: migrationResult,
   handler: async (ctx, args) => {
-    // Only run this after restoring the stage-one schema where `issuer` is
-    // optional. The Better Auth 1.7 schema requires `issuer` on every account.
+    // Better Auth 1.7.3 restored the 1.6 account identity model. Run this only
+    // after deploying the optional `issuer` schema and removing its index.
     const page = await ctx.db
       .query('account')
       .order('asc')
