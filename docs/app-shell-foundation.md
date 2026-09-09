@@ -295,113 +295,73 @@ Then verify auth in the browser against running `pnpm dev` and
 
 ## 6. KitCN and JWKS Bootstrap
 
-KitCN auth has a one-time bootstrap ordering requirement for new Convex deployments:
+For the installed Convex 1.44 / KitCN 0.32.2 stack, an optional runtime JWKS
+read can still fail auth-config analysis when the deployment has no JWKS.
+The dynamic provider fallback alone does not make a fresh deployment safe.
 
-1. The generated auth functions must exist in Convex before `kitcn env push` can call `generated/auth:getLatestJwks`.
-2. The static `JWKS` env value should be pushed after those functions exist.
-3. `convex/auth.config.ts` should read JWKS through KitCN's typed env helper, use the dynamic provider while it is missing, and automatically switch to the static provider after it is pushed.
-4. `convex/.env` must contain only KitCN-managed shared auth values. Configure `SITE_URL`, `DEPLOY_ENV`, provider credentials, and other deployment-specific values directly on each Convex deployment.
+### First Bootstrap and Recovery
 
-### First Bootstrap for a New Template Deployment
-
-Use the typed env helper and bootstrap fallback in `convex/auth.config.ts`:
-
-```ts
-import { getAuthConfigProvider } from "kitcn/auth/config";
-import type { AuthConfig } from "convex/server";
-import { getAuthJwks } from "./lib/env";
-
-const jwks = getAuthJwks();
-
-export default {
-  providers: [
-    jwks ? getAuthConfigProvider({ jwks }) : getAuthConfigProvider(),
-  ],
-} satisfies AuthConfig;
-```
-
-Then run:
+Run:
 
 ```bash
-pnpm exec kitcn codegen
-pnpm exec convex dev --once
-pnpm exec kitcn env push
+pnpm run setup
 ```
 
-The raw `convex dev --once` command above is a first-bootstrap fallback used to
-push functions before the generated JWKS exists. Use `pnpm exec kitcn dev` for
-the normal local backend loop.
+The script initializes Convex before any function push, targets the local/dev
+deployment in `.env.local`, and sets its browser origin from
+`NEXT_PUBLIC_SITE_URL`. It checks existing managed auth values before writing:
+remote keys/secrets are preserved; conflicts with `convex/.env` require
+reconciliation.
 
-What each command does:
+Only an absent JWKS receives the temporary `[]` value. KitCN converts this
+to an empty public key set, so authentication is unavailable until real keys
+exist. `kitcn dev --bootstrap` owns the first deployment and auth sync, plus
+migrations and aggregate backfills. Setup checks that signing keys exist,
+then completes another codegen/bootstrap pass.
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm exec kitcn codegen` | Generates KitCN auth runtime files and Convex bindings |
-| `pnpm exec convex dev --once` | Pushes current Convex functions to the active dev deployment once |
-| `pnpm exec kitcn env push` | Generates/syncs `BETTER_AUTH_SECRET` and `JWKS` to Convex env |
+If a step fails, fix the reported error and rerun setup. An unfinished empty
+placeholder is retained deliberately: deleting it would reproduce the missing
+env error. No existing real JWKS is replaced with the placeholder. Start the
+frontend only after setup completes.
 
-After `kitcn env push` succeeds, run one more generation/deploy pass:
+`convex/.env` contains only shared managed auth values. Configure `SITE_URL`,
+`DEPLOY_ENV`, OAuth credentials, and email credentials directly on each target
+deployment. Leave managed entries absent in a fresh checkout; KitCN generates
+them.
 
-```bash
-pnpm exec kitcn codegen
-pnpm exec convex dev --once
-```
-
-### Normal Repeatable Flow After Bootstrap
-
-After the first bootstrap succeeds:
+### Normal Development and Rotation
 
 ```bash
 pnpm exec kitcn dev
 ```
 
-KitCN now owns Convex, codegen, migrations, aggregate backfills, and local env
-sync. Use `kitcn env push` again for explicit repair or key rotation. Key
-rotation signs users out:
+KitCN owns Convex, codegen, migrations, aggregate backfills, and local env sync.
+Use `kitcn env push` for explicit repair on an active deployment. Key rotation
+signs users out:
 
 ```bash
-pnpm exec kitcn env push --rotate
+pnpm exec kitcn env push --rotate --force
 ```
 
-Before production bootstrap, configure all deployment-specific values directly
-on the production deployment. Never put development values such as
-`SITE_URL=http://localhost:3000` or `DEPLOY_ENV=development` in `convex/.env`:
+### Production Bootstrap
+
+Follow [the production bootstrap instructions in README](../README.md#kitcn--jwks-bootstrap).
+Configure production-specific variables first, inspect JWKS on that exact
+deployment, and seed `[]` only if it is absent. Keep traffic off a new deployment
+until both deploys and managed auth sync finish. Preserve existing production
+secrets and keys when reconciling `convex/.env`; a forced push overwrites conflicts.
+
+### Verification
 
 ```bash
-pnpm exec kitcn env set --prod DEPLOY_ENV production
-pnpm exec kitcn env set --prod SITE_URL https://app.example.com
+pnpm run verify:bootstrap
+pnpm run check
 ```
 
-Then use the complete production JWKS bootstrap flow:
-
-```bash
-pnpm exec kitcn deploy --prod
-pnpm exec kitcn env push --prod
-pnpm exec kitcn codegen
-pnpm exec kitcn deploy --prod
-```
-
-`kitcn env push --prod` pushes every entry in `convex/.env`. Keep that file
-limited to KitCN-managed shared auth values (`BETTER_AUTH_SECRET` and `JWKS`) so
-it cannot conflict with or overwrite production-specific configuration.
-
-### Common Bootstrap Failure
-
-If `kitcn env push` fails with:
-
-```txt
-Could not find function for 'generated/auth:getLatestJwks'
-```
-
-then the generated auth functions are not deployed yet. Run:
-
-```bash
-pnpm exec kitcn codegen
-pnpm exec convex dev --once
-pnpm exec kitcn env push
-```
-
-If codegen fails because `JWKS` is referenced but missing, `convex/auth.config.ts` is reading `process.env.JWKS` directly. Read it through `getAuthJwks()`, deploy once with the dynamic fallback, push env, and run the final deploy to enable static JWKS.
+The bootstrap tests exercise fresh/existing deployments, failed reads and pushes,
+resuming an incomplete bootstrap, target guards, and the Windows-safe CLI runner.
+Also verify a fresh local setup and a rerun against its existing keys when changing
+this flow.
 
 ---
 
@@ -448,8 +408,7 @@ This file is reserved for KitCN-managed shared auth values pushed by
 `pnpm exec kitcn env push`:
 
 ```bash
-BETTER_AUTH_SECRET=
-JWKS=
+# Leave managed auth entries absent; KitCN generates them.
 ```
 
 Do not add `SITE_URL`, `DEPLOY_ENV`, OAuth credentials, email credentials, or
@@ -883,7 +842,7 @@ Keep billing isolated so projects that do not need payments can remove it cleanl
 | Generated auth is disabled | Missing `convex/auth.ts` | Add auth config and run KitCN codegen |
 | Google OAuth redirects fail | OAuth callback mismatch | Confirm Google console callback matches site origin and auth route |
 | `generated/auth:getLatestJwks` missing | Auth functions not pushed yet | Run first bootstrap flow in §6 |
-| Codegen says `JWKS` is used but unset | `convex/auth.config.ts` reads `process.env.JWKS` directly | Read it through `getAuthJwks()`, push functions, run `kitcn env push`, then deploy again |
+| Codegen says `JWKS` is used but unset | Fresh deployment has no JWKS during auth-config analysis | Run `pnpm run setup`; see §6 for production bootstrap |
 
 Useful commands:
 
@@ -993,5 +952,5 @@ Optional modules       -> app-auth.config.ts for auth, isolated config/env for S
 Local backend          -> pnpm exec kitcn dev
 Codegen fallback       -> pnpm exec kitcn codegen
 Env repair/rotation    -> pnpm exec kitcn env push
-First JWKS bootstrap   -> codegen -> convex dev --once -> kitcn env push -> codegen -> convex dev --once
+First JWKS bootstrap   -> pnpm run setup
 ```
