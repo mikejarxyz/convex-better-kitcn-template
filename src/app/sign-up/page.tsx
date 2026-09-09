@@ -93,12 +93,14 @@ export default function SignUpPage() {
           <CardTitle className="text-xl">Create account</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <OAuthButtons
-            callbackURL={ROUTES.APP.ROOT}
-            disabled={anyPending}
-            onLoadingChange={setOauthPending}
-          />
-          {AUTH_FEATURES.credentials && (
+          {AUTH_FEATURES.google && (
+            <OAuthButtons
+              callbackURL={ROUTES.APP.ROOT}
+              disabled={anyPending}
+              onLoadingChange={setOauthPending}
+            />
+          )}
+          {AUTH_FEATURES.google && AUTH_FEATURES.credentials && (
             <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />

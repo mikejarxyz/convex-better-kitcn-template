@@ -8,9 +8,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "verify:bootstrap": "node scripts/verify-bootstrap.mjs",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run build"
+    "check": "pnpm run verify:bootstrap && pnpm run lint && pnpm run typecheck && pnpm run build"
   },
   "engines": {
     "node": ">=24 <25",
