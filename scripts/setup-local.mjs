@@ -39,12 +39,17 @@ const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 copyIfMissing(join(root, ".env.example"), join(root, ".env.local"));
 copyIfMissing(join(root, "convex", ".env.example"), join(root, "convex", ".env"));
 
-run(pnpm, ["exec", "convex", "dev", "--once"]);
+// Configure the deployment without pushing functions first. auth.config.ts uses
+// static JWKS when available, so the first push needs a valid, fail-closed
+// placeholder until KitCN can generate the real key set from the deployed auth
+// runtime. No frontend is started during this bootstrap window.
+run(pnpm, ["exec", "convex", "init"]);
 run(pnpm, ["exec", "convex", "env", "set", "DEPLOY_ENV", "development"]);
 run(pnpm, ["exec", "convex", "env", "set", "SITE_URL", "http://localhost:3000"]);
+run(pnpm, ["exec", "convex", "env", "set", "JWKS", "[]"]);
 run(pnpm, ["exec", "kitcn", "codegen"]);
 run(pnpm, ["exec", "convex", "dev", "--once"]);
-run(pnpm, ["exec", "kitcn", "env", "push"]);
+run(pnpm, ["exec", "kitcn", "env", "push", "--force"]);
 run(pnpm, ["exec", "kitcn", "codegen"]);
 run(pnpm, ["exec", "convex", "dev", "--once"]);
 

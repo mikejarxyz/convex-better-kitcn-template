@@ -1,7 +1,9 @@
 export const AUTH_CONFIG = {
   providers: {
     credentials: true,
-    google: true,
+    // Keep OAuth out of the local lesson path. Enable only after configuring
+    // GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the target deployment.
+    google: false,
   },
   account: {
     profile: true,
