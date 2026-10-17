@@ -58,10 +58,50 @@ compatibility set, and check KitCN's Convex peer range before changing Convex.
 
 ## Current compatibility constraint
 
-At the repository's current pins, KitCN `0.32.2` requires Better Auth `1.7.x`
-and Convex `>=1.42 <1.45`. Keep Convex on `1.44.x` until the selected KitCN
-release advertises support for Convex `1.45` or newer. Recheck the peer range;
+At the repository's current pins, KitCN `0.33.11` requires Better Auth `1.7.x`
+and Convex `>=1.42 <1.47`. Keep Convex on `1.46.x` until the selected KitCN
+release advertises support for Convex `1.47` or newer. Recheck the peer range;
 do not rely on this paragraph after changing KitCN.
+
+## KitCN 0.33.11 / Better Auth 1.7.10 upgrade
+
+Upgrade KitCN, Better Auth, and the passkey package together. KitCN 0.33.11
+fixes adapter arguments introduced by Better Auth 1.7.6, and its generated
+auth module includes the `consumeOne` and `incrementOne` internal mutations.
+Regenerate and deploy through KitCN before verifying the updated auth flows.
+
+Better Auth 1.7.7 changes OAuth state encryption and verification identifier
+prefixes. Upgrade servers sharing auth storage together, including OAuth Proxy
+participants when used. OAuth sign-ins and account linking started before the
+upgrade must be restarted; pre-upgrade magic links must be requested again.
+Keep the existing account schema extensions and focus-refetch mitigation.
+
+KitCN 0.33 changes ordering and cursor behavior for wide indexed filters and
+indexed `select().flatMap()` relations. Recheck these queries when adding them;
+the template currently has no app-owned queries using those patterns.
+
+Release notes: [KitCN](https://github.com/udecode/kitcn/blob/main/packages/kitcn/CHANGELOG.md),
+[Better Auth](https://github.com/better-auth/better-auth/blob/main/packages/better-auth/CHANGELOG.md).
+
+### Verification on October 16, 2026
+
+- `pnpm exec kitcn dev --bootstrap` regenerated the auth runtime and pushed
+  successfully to the development deployment.
+- `pnpm run check` passed all 11 bootstrap tests, lint, typechecking, and the
+  Next.js 16.4.2 production build.
+- Credential sign-up, session lookup, sign-out, incorrect-password rejection,
+  and returning sign-in passed against development; the temporary test user,
+  account, and sessions were removed afterward.
+- Browser checks passed for signed-out sign-in/sign-up forms, repeated focus
+  events on sign-in, and protected-route redirection. The focus-refetch
+  mitigation remains enabled.
+- Google OAuth, account unlinking, hardware passkeys, enrolled 2FA, cross-tab
+  authenticated sessions, and token expiry still require interactive checks.
+- `pnpm audit --prod --audit-level low` reported no known vulnerabilities.
+  The full audit retains one high-severity development-only advisory in
+  `eslint-config-next > @next/eslint-plugin-next > fast-glob > micromatch > braces`.
+  No patched `braces` release is available; track
+  [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm).
 
 ## Better Auth 1.7.3 account-schema restoration
 

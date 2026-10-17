@@ -124,7 +124,8 @@ including the port.
 
 ### KitCN / JWKS Bootstrap
 
-With Convex 1.44 and KitCN 0.32.2, reading the optional `JWKS` through
+The bootstrap guards against a behavior observed with Convex 1.44 and KitCN
+0.32.2: reading the optional `JWKS` through
 `getAuthJwks()` still counts as an environment access during auth-config
 analysis. An unset value can therefore fail the first deployment before the
 dynamic provider fallback becomes usable.
